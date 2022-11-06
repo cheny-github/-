@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>双打羽毛球发球模拟器</title>
+  <link href="https://cdn.bootcdn.net/ajax/libs/element-plus/2.2.19/index.css" rel="stylesheet">
+</head>
+
+<body>
+  <h1>双打羽毛球发球模拟器</h1>
+  <div style="margin-bottom:40px;color: #787878;">红色圈出来的区域代表发球方的发球区域，黄色圈出来的区域代表接球方的接球区域</div>
+  <div id="app">
+    <div class="btn-group">
+      <div style="margin-right: 120px;">
+        <div class="btn-item" v-for="item of leftPlayers" :key="item">
+          <img :src="`./${item}.png`" alt="" width="40" />
+          <el-button type="text" @click="leftWin(item)">得分+1</el-button>
+        </div>
+      </div>
+      <div>
+        <div class="btn-item" v-for="item of rightPlayers" :key="item">
+          <img :src="`./${item}.png`" alt="" width="40" />
+          <el-button type="text" @click="rightWin(item)">得分+1</el-button>
+        </div>
+      </div>
+    </div>
+    <h1> 比分 {{leftScore}}:{{rightScore}}</h1>
+  </div>
+  <canvas id="playground" height="210" width="400">
+
+  </canvas>
+
+  <script src="https://cdn.bootcdn.net/ajax/libs/vue/3.2.41/vue.global.min.js"></script>
+  <script src="https://cdn.bootcdn.net/ajax/libs/element-plus/2.2.19/index.full.min.js"></script>
+  <script>
+    /**
+     * @type {HTMLCanvasElement}
+    */
+    const playground = document.querySelector("#playground");
+    const ctx = playground.getContext("2d");
+    ctx.fillStyle = '#228B22'
+    ctx.fillRect(0, 0, playground.width, playground.height);
+    //  ------------------羽毛球场参数----------------------------------------
+    const BaseX = 15
+    const BaseY = 10
+    const 羽毛球场地长度 = 367
+    const 羽毛球场地宽度 = 186
+    const 左上坐标 = [BaseX, BaseY]
+    const 右上坐标 = [BaseX + 羽毛球场地长度, BaseY]
+    const 左下坐标 = [BaseX, BaseY + 羽毛球场地宽度]
+    const 右下坐标 = [BaseX + 羽毛球场地长度, BaseY + 羽毛球场地宽度]
+    const 中上坐标 = [BaseX + 羽毛球场地长度 / 2, BaseY]
+    const 中下坐标 = [BaseX + 羽毛球场地长度 / 2, BaseY + 羽毛球场地宽度]
+    const 正中心坐标 = [BaseX + 羽毛球场地长度 / 2, BaseY + 羽毛球场地宽度 / 2]
+    const 白色线条宽度 = 2
+    ctx.fillStyle = '#228B22'
+    ctx.fillRect(BaseX, BaseY, 羽毛球场地长度, 羽毛球场地宽度);
+
+
+    // ----------------------图片资源-------------------------------------
+    const playerPositionA = [BaseX + 60, BaseY + 30]
+    const playerPositionB = [BaseX + 60, BaseY + 110,]
+    const playerPositionC = [BaseX + 260, BaseY + 30,]
+    const playerPositionD = [BaseX + 260, BaseY + 110,]
+    const imageA = new Image()
+    imageA.src = './a.png'
+    imageA.position = playerPositionA
+    imageA.场地 = '左边场地'
+    const imageB = new Image()
+    imageB.src = './b.png'
+    imageB.position = playerPositionB
+    imageB.场地 = '左边场地'
+    const imageC = new Image()
+    imageC.src = './c.png'
+    imageC.position = playerPositionC
+    imageC.场地 = '右边场地'
+    const imageD = new Image()
+    imageD.src = './d.png'
+    imageD.position = playerPositionD
+    imageD.场地 = '右边场地'
+    const imgMap = {
+      a: imageA,
+      b: imageB,
+      c: imageC,
+      d: imageD,
+    }
+
+    function strokeLine(strokeCommand) {
+      ctx.beginPath();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 白色线条宽度;
+      strokeCommand()
+      ctx.stroke();
+    }
+    function 画羽毛球场地() {
+      // 中间竖线虚线
+      strokeLine(() => {
+        ctx.setLineDash([5, 5]);
+        const [x, y] = 中上坐标
+        ctx.moveTo(x, y);
+        const [x2, y2] = 中下坐标
+        ctx.lineTo(x2, y2);
+      })
+      ctx.setLineDash([]);
+      // 上边线
+      strokeLine(() => {
+        const [x, y] = 左上坐标
+        ctx.moveTo(x, y);
+        const [x2, y2] = 右上坐标
+        ctx.lineTo(x2, y2);
+      })
+      // 右边边线
+      strokeLine(() => {
+        const [x, y] = 右上坐标
+        ctx.moveTo(x, y);
+        const [x2, y2] = 右下坐标
+        ctx.lineTo(x2, y2);
+      })
+      // 下边线
+      strokeLine(() => {
+        const [x, y] = 左下坐标
+        ctx.moveTo(x, y);
+        const [x2, y2] = 右下坐标
+        ctx.lineTo(x2, y2);
+      })
+      // 左边线
+      strokeLine(() => {
+        const [x, y] = 左上坐标
+        ctx.moveTo(x, y);
+        const [x2, y2] = 左下坐标
+        ctx.lineTo(x2, y2);
+      })
+
+      // 竖线1
+      strokeLine(() => {
+        const [x, y] = 左上坐标
+        ctx.moveTo(x + 20, y);
+        const [x2, y2] = 左下坐标
+        ctx.lineTo(x2 + 20, y2);
+      })
+      // 竖线2
+      strokeLine(() => {
+        const [x, y] = 左上坐标
+        ctx.moveTo(x + 144, y);
+        const [x2, y2] = 左下坐标
+        ctx.lineTo(x2 + 144, y2);
+      })
+      // 竖线3
+      strokeLine(() => {
+        const [x, y] = 左上坐标
+        ctx.moveTo(x + 223, y);
+        const [x2, y2] = 左下坐标
+        ctx.lineTo(x2 + 223, y2);
+      })
+      // 竖线4
+      strokeLine(() => {
+        const [x, y] = 左上坐标
+        ctx.moveTo(x + 347, y);
+        const [x2, y2] = 左下坐标
+        ctx.lineTo(x2 + 347, y2);
+      })
+      // 横线1
+      strokeLine(() => {
+        const [x, y] = 左上坐标
+        ctx.moveTo(x, y + 20);
+        const [x2, y2] = 右上坐标
+        ctx.lineTo(x2, y2 + 20);
+      })
+      // 横线2
+      strokeLine(() => {
+        const [x, y] = 左上坐标
+        ctx.moveTo(x, y + 165);
+        const [x2, y2] = 右上坐标
+        ctx.lineTo(x2, y2 + 165);
+      })
+      // 左边区域中间横线
+      strokeLine(() => {
+        const [x, y] = 左上坐标
+        ctx.moveTo(x, y + 羽毛球场地宽度 / 2);
+        const [, y2] = 正中心坐标
+        ctx.lineTo(BaseX + 144, y2);
+      })
+      // 右边区域中间横线
+      strokeLine(() => {
+        const [x, y] = 右上坐标
+        ctx.moveTo(x, y + 羽毛球场地宽度 / 2);
+        const [, y2] = 正中心坐标
+        ctx.lineTo(BaseX + 223, y2);
+      })
+    }
+    function 展示左上接发球区域(color) {
+      strokeLine(() => {
+        ctx.strokeStyle = color
+        ctx.moveTo(BaseX + 20, BaseY)
+        ctx.lineTo(BaseX + 20 + 124, BaseY)
+        ctx.lineTo(BaseX + 20 + 124, BaseY + 93)
+        ctx.lineTo(BaseX + 20, BaseY + 93)
+        ctx.closePath()
+      })
+    }
+    function 展示左下接发球区域(color) {
+      strokeLine(() => {
+        ctx.strokeStyle = color
+        ctx.moveTo(BaseX + 20, BaseY + 93)
+        ctx.lineTo(BaseX + 20 + 124, BaseY + 93)
+        ctx.lineTo(BaseX + 20 + 124, BaseY + 羽毛球场地宽度)
+        ctx.lineTo(BaseX + 20, BaseY + 羽毛球场地宽度)
+        ctx.closePath()
+      })
+    }
+    function 展示右上接发球区域(color) {
+      strokeLine(() => {
+        ctx.strokeStyle = color
+        const [x, y] = 右上坐标
+        ctx.moveTo(x - 20, y)
+        ctx.lineTo(x - 20, y + 93)
+        ctx.lineTo(x - 20 - 124, y + 93)
+        ctx.lineTo(x - 20 - 124, y)
+        ctx.closePath()
+      })
+    }
+    function 展示右下接发球区域(color) {
+      strokeLine(() => {
+        ctx.strokeStyle = color
+        const [x, y] = 右上坐标
+        ctx.moveTo(x - 20, y + 93)
+        ctx.lineTo(x - 20, y + 羽毛球场地宽度)
+        ctx.lineTo(x - 20 - 124, y + 羽毛球场地宽度)
+        ctx.lineTo(x - 20 - 124, y + 93)
+        ctx.closePath()
+      })
+    }
+    function drawPlayer(playerImage) {
+      ctx.drawImage(playerImage, ...playerImage.position, 40, 40)
+    }
+
+    function onLoadImage(params) {
+      return Promise.all([
+        new Promise((resolve) => {
+          imageA.onload = resolve
+        }),
+        new Promise((resolve) => {
+          imageB.onload = resolve
+        }),
+        new Promise((resolve) => {
+          imageC.onload = resolve
+        }),
+        new Promise((resolve) => {
+          imageD.onload = resolve
+        }),
+      ]).then(() => {
+        drawPlayer(imageA)
+        drawPlayer(imageB)
+        drawPlayer(imageC)
+        drawPlayer(imageD)
+      })
+    }
+
+
+
+    // ------------------------画图逻辑执行--------------------------------------------------
+    画羽毛球场地()
+    onLoadImage()
+    const { watch, ref, createApp } = Vue
+    const vueApp = createApp({
+      data() {
+        return {
+          playerAScore: 0,
+          playerBScore: 0,
+          playerCScore: 0,
+          playerDScore: 0,
+          operateEnable: true,
+          history: [],
+          leftPlayers: ['a', 'b'],
+          rightPlayers: ['c', 'd']
+        }
+      },
+      mounted() {
+      },
+      computed: {
+        leftScore() {
+          return this.playerAScore + this.playerBScore
+        },
+        rightScore() {
+          return this.playerCScore + this.playerDScore
+        },
+      },
+      methods: {
+        drawPlayers() {
+          [...this.leftPlayers, ...this.rightPlayers].forEach((item => {
+            drawPlayer(imgMap[item]);
+          }))
+        },
+        leftWin(player) {
+          if (!this.operateEnable) {
+            return
+          }
+          if (player === 'a') {
+            this.playerAScore++;
+          }
+          if (player === 'b') {
+            this.playerBScore++;
+          }
+          const lastRecord = this.history[0]
+          if (lastRecord === 'leftWin') { // 同一边的再次赢了，换位置继续发球
+            this.leftPlayers = this.leftPlayers.reverse()
+            Promise.all([
+            this.交换位置动画(imageA),
+            this.交换位置动画(imageB)
+            ])
+            .then(()=>{
+              this.标记接球发球区域('leftPlayers')
+            })
+    
+          } else {
+            this.renderCanvas()
+            this.标记接球发球区域('leftPlayers')
+          }
+
+          this.history.unshift('leftWin')
+        },
+        rightWin(player) {
+          if (!this.operateEnable) {
+            return
+          }
+          if (player === 'c') {
+            this.playerCScore++;
+          }
+          if (player === 'd') {
+            this.playerDScore++;
+          }
+          const lastRecord = this.history[0]
+          if (lastRecord === 'rightWin') {
+            this.rightPlayers = this.rightPlayers.reverse()
+            Promise.all([
+            this.交换位置动画(imageC),
+            this.交换位置动画(imageD)
+            ])
+            .then(()=>{
+              this.标记接球发球区域('rightPlayers')
+            })
+          } else {
+            this.renderCanvas()
+            this.标记接球发球区域('rightPlayers')
+          }
+          this.history.unshift('rightWin')
+        },
+        标记接球发球区域(winner) {
+          if (winner === 'leftPlayers') {
+            if (this.leftScore % 2 === 0) {
+              展示左下接发球区域('red')
+              展示右上接发球区域('yellow')
+            } else {
+              展示左上接发球区域('red')
+              展示右下接发球区域('yellow')
+            }
+          } else {
+            if (this.rightScore % 2 === 0) {
+              展示右上接发球区域('red')
+              展示左下接发球区域('yellow')
+            }else {
+              展示右下接发球区域('red')
+              展示左上接发球区域('yellow')
+            }
+          }
+
+        },
+        
+        交换位置动画(playerImage) {
+          return new Promise(resolve=>{
+            this.operateEnable = false
+            let imageTargetPosition
+            const { 场地 } = playerImage
+            if (场地 === '左边场地') {
+              imageTargetPosition = playerImage.position === playerPositionA ? { position: playerPositionB, direction: 'down' } : { position: playerPositionA, direction: 'up' };
+            } else {
+              imageTargetPosition = playerImage.position === playerPositionC ? { position: playerPositionD, direction: 'down' } : { position: playerPositionC, direction: 'up' };
+            }
+            playerImage.position = [...playerImage.position]
+            const animeFrame = () => {
+              requestAnimationFrame(() => {
+                const { position, direction } = imageTargetPosition
+                const y = playerImage.position[1]
+                const targetY = position[1]
+                if (direction === 'up') {
+                  if (y > targetY) {
+                    playerImage.position[1]--;
+                    animeFrame();
+                  } else {
+                    playerImage.position = position
+                    this.operateEnable = true;
+                    resolve()
+                  }
+                } else {
+                  if (y < targetY) {
+                    playerImage.position[1]++;
+                    animeFrame();
+                  } else {
+                    playerImage.position = position
+                    this.operateEnable = true;
+                    resolve()
+                  }
+                }
+                this.renderCanvas()
+              })
+            }
+            animeFrame()
+          })
+        },
+        renderCanvas() {
+          ctx.fillStyle = '#228B22'
+          ctx.fillRect(BaseX, BaseY, 羽毛球场地长度, 羽毛球场地宽度);
+          画羽毛球场地()
+          this.drawPlayers();
+        },
+     
+      },
+    })
+    vueApp.use(ElementPlus)
+    vueApp.mount('#app')
+  </script>
+</body>
+<style>
+  body,
+  html {
+    padding: 0;
+    margin: 0;
+  }
+
+  body {
+    display: flex;
+    align-items: center;
+    padding-top: 60px;
+    flex-direction: column;
+    ;
+  }
+
+  #app {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+  }
+
+  .btn-group {
+    position: absolute;
+    top: 520px;
+    display: flex;
+
+  }
+
+  .btn-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+</style>
+
+</html>
