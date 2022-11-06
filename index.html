@@ -81,12 +81,6 @@
     imageD.src = './d.png'
     imageD.position = playerPositionD
     imageD.场地 = '右边场地'
-    const imgMap = {
-      a: imageA,
-      b: imageB,
-      c: imageC,
-      d: imageD,
-    }
 
     function strokeLine(strokeCommand) {
       ctx.beginPath();
@@ -236,7 +230,12 @@
     function drawPlayer(playerImage) {
       ctx.drawImage(playerImage, ...playerImage.position, 40, 40)
     }
-
+    function drawAllPlayers() {
+        drawPlayer(imageA)
+        drawPlayer(imageB)
+        drawPlayer(imageC)
+        drawPlayer(imageD)
+    }
     function onLoadImage(params) {
       return Promise.all([
         new Promise((resolve) => {
@@ -251,12 +250,7 @@
         new Promise((resolve) => {
           imageD.onload = resolve
         }),
-      ]).then(() => {
-        drawPlayer(imageA)
-        drawPlayer(imageB)
-        drawPlayer(imageC)
-        drawPlayer(imageD)
-      })
+      ]).then(drawAllPlayers)
     }
 
 
@@ -289,11 +283,7 @@
         },
       },
       methods: {
-        drawPlayers() {
-          [...this.leftPlayers, ...this.rightPlayers].forEach((item => {
-            drawPlayer(imgMap[item]);
-          }))
-        },
+ 
         leftWin(player) {
           if (!this.operateEnable) {
             return
@@ -414,7 +404,7 @@
           ctx.fillStyle = '#228B22'
           ctx.fillRect(BaseX, BaseY, 羽毛球场地长度, 羽毛球场地宽度);
           画羽毛球场地()
-          this.drawPlayers();
+          drawAllPlayers();
         },
      
       },
